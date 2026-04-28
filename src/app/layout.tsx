@@ -8,9 +8,25 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://hanip-map-yk2r.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "한입지도 | 우리만의 맛집 지도",
   description: "둘이서 모은 맛집을 지도에 기록하고, 다음 한 입을 찾아보세요.",
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: SITE_URL,
+    siteName: "한입지도",
+    title: "한입지도 | 우리만의 맛집 지도",
+    description: "둘이서 모은 맛집을 지도에 기록하고, 다음 한 입을 찾아보세요.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "한입지도 | 우리만의 맛집 지도",
+    description: "둘이서 모은 맛집을 지도에 기록하고, 다음 한 입을 찾아보세요.",
+  },
 };
 
 export default function RootLayout({
