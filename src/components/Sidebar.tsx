@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Restaurant, FilterState } from "@/types/restaurant";
+import { haversineDistance, formatDistance, type LatLng } from "@/lib/geo";
 
 interface SidebarProps {
   restaurants: Restaurant[];
@@ -13,6 +14,9 @@ interface SidebarProps {
   onAddClick: () => void;
   onRandomPick: () => void;
   selectedId?: string;
+  userLocation?: LatLng | null;
+  sortByDistance: boolean;
+  onToggleSortByDistance: () => void;
 }
 
 const CATEGORIES = ["전체", "한식", "양식", "중식", "일식", "카페", "술집", "분식", "기타"];
@@ -28,6 +32,9 @@ export default function Sidebar({
   onAddClick,
   onRandomPick,
   selectedId,
+  userLocation,
+  sortByDistance,
+  onToggleSortByDistance,
 }: SidebarProps) {
   return (
     <aside className="w-full md:w-[360px] h-full flex flex-col bg-white border-r border-gray-100">
@@ -129,34 +136,49 @@ export default function Sidebar({
           ))}
         </div>
 
-        {/* Visited Filter */}
-        <div className="flex gap-1.5">
-          {[
-            { value: "all", label: "전체" },
-            { value: "visited", label: "가봤어요" },
-            { value: "want", label: "가고싶어요" },
-          ].map(({ value, label }) => (
+        {/* Visited Filter + Distance sort */}
+        <div className="flex gap-1.5 items-center justify-between">
+          <div className="flex gap-1.5">
+            {[
+              { value: "all", label: "전체" },
+              { value: "visited", label: "가봤어요" },
+              { value: "want", label: "가고싶어요" },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() =>
+                  onFilterChange({
+                    ...filter,
+                    visited: value as FilterState["visited"],
+                  })
+                }
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  filter.visited === value
+                    ? value === "visited"
+                      ? "bg-visited text-white"
+                      : value === "want"
+                      ? "bg-want text-white"
+                      : "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {userLocation && (
             <button
-              key={value}
-              onClick={() =>
-                onFilterChange({
-                  ...filter,
-                  visited: value as FilterState["visited"],
-                })
-              }
+              onClick={onToggleSortByDistance}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                filter.visited === value
-                  ? value === "visited"
-                    ? "bg-visited text-white"
-                    : value === "want"
-                    ? "bg-want text-white"
-                    : "bg-gray-900 text-white"
+                sortByDistance
+                  ? "bg-want text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
+              title="현재 위치 기준 가까운 순으로 정렬"
             >
-              {label}
+              📍 가까운순
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -169,7 +191,11 @@ export default function Sidebar({
           </div>
         ) : (
           <ul>
-            {restaurants.map((r) => (
+            {restaurants.map((r) => {
+              const distance = userLocation
+                ? haversineDistance(userLocation.lat, userLocation.lng, r.lat, r.lng)
+                : null;
+              return (
               <li
                 key={r.id}
                 onClick={() => onSelect(r)}
@@ -191,6 +217,11 @@ export default function Sidebar({
                     </div>
                     <p className="text-xs text-gray-500 mt-1 ml-4">
                       {r.region} · {r.category}
+                      {distance !== null && (
+                        <span className="ml-2 text-want font-medium">
+                          · {formatDistance(distance)}
+                        </span>
+                      )}
                     </p>
                     {r.memo && (
                       <p className="text-xs text-gray-400 mt-0.5 ml-4 truncate">
@@ -217,7 +248,8 @@ export default function Sidebar({
                   </div>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

@@ -3,21 +3,25 @@
 import { useEffect, useRef, useCallback } from "react";
 import { loadKakaoMap } from "@/lib/kakao";
 import type { Restaurant } from "@/types/restaurant";
+import type { LatLng } from "@/lib/geo";
 
 interface KakaoMapProps {
   restaurants: Restaurant[];
   onMarkerClick: (restaurant: Restaurant) => void;
   selectedId?: string;
+  userLocation?: LatLng | null;
 }
 
 export default function KakaoMap({
   restaurants,
   onMarkerClick,
   selectedId,
+  userLocation,
 }: KakaoMapProps) {
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const markersRef = useRef<kakao.maps.Marker[]>([]);
   const overlaysRef = useRef<kakao.maps.CustomOverlay[]>([]);
+  const userOverlayRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +44,51 @@ export default function KakaoMap({
       mapRef.current.panTo(new kakao.maps.LatLng(r.lat, r.lng));
     }
   }, [selectedId, restaurants]);
+
+  // Show user location marker and center on it
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (userOverlayRef.current) {
+      userOverlayRef.current.setMap(null);
+      userOverlayRef.current = null;
+    }
+
+    if (!userLocation) return;
+
+    const position = new kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+    const content = `
+      <div style="position: relative; width: 24px; height: 24px;">
+        <div style="
+          position: absolute; top: 0; left: 0;
+          width: 24px; height: 24px;
+          background: #3b82f6;
+          border-radius: 50%;
+          opacity: 0.25;
+          animation: ping 2s cubic-bezier(0,0,0.2,1) infinite;
+        "></div>
+        <div style="
+          position: absolute; top: 6px; left: 6px;
+          width: 12px; height: 12px;
+          background: #3b82f6;
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+        "></div>
+      </div>
+    `;
+    const overlay = new kakao.maps.CustomOverlay({
+      position,
+      content,
+      yAnchor: 0.5,
+      xAnchor: 0.5,
+    });
+    overlay.setMap(mapRef.current);
+    userOverlayRef.current = overlay;
+
+    mapRef.current.setLevel(5);
+    mapRef.current.panTo(position);
+  }, [userLocation]);
 
   const clearMarkers = useCallback(() => {
     markersRef.current.forEach((m) => m.setMap(null));

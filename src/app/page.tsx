@@ -7,6 +7,8 @@ import AddModal from "@/components/AddModal";
 import DetailPanel from "@/components/DetailPanel";
 import RandomPicker from "@/components/RandomPicker";
 import { supabase } from "@/lib/supabase";
+import { getCurrentPosition, haversineDistance, type LatLng } from "@/lib/geo";
+import { useDialog } from "@/lib/dialog";
 import type { Restaurant, FilterState, RestaurantFormData } from "@/types/restaurant";
 
 export default function Home() {
@@ -16,11 +18,30 @@ export default function Home() {
   const [showRandom, setShowRandom] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState("");
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [sortByDistance, setSortByDistance] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [filter, setFilter] = useState<FilterState>({
     area: "전체",
     category: "",
     visited: "all",
   });
+  const { toast } = useDialog();
+
+  const handleLocate = async () => {
+    setLocating(true);
+    try {
+      const pos = await getCurrentPosition();
+      setUserLocation(pos);
+      setSortByDistance(true);
+      toast("현재 위치를 찾았어요", "success");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "위치 가져오기 실패";
+      toast(msg, "error");
+    } finally {
+      setLocating(false);
+    }
+  };
 
   // Fetch restaurants
   useEffect(() => {
@@ -34,10 +55,10 @@ export default function Home() {
     fetchRestaurants();
   }, []);
 
-  // Filter restaurants
+  // Filter + optional distance sort
   const filteredRestaurants = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return restaurants.filter((r) => {
+    const filtered = restaurants.filter((r) => {
       if (filter.area !== "전체" && r.area !== filter.area) return false;
       if (filter.category && r.category !== filter.category) return false;
       if (filter.visited === "visited" && !r.visited) return false;
@@ -57,7 +78,17 @@ export default function Home() {
       }
       return true;
     });
-  }, [restaurants, filter, search]);
+
+    if (sortByDistance && userLocation) {
+      return [...filtered].sort((a, b) => {
+        const da = haversineDistance(userLocation.lat, userLocation.lng, a.lat, a.lng);
+        const db = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+        return da - db;
+      });
+    }
+
+    return filtered;
+  }, [restaurants, filter, search, sortByDistance, userLocation]);
 
   const selectedRestaurant = useMemo(
     () => restaurants.find((r) => r.id === selectedId),
@@ -179,6 +210,9 @@ export default function Home() {
           onAddClick={() => setShowAddModal(true)}
           onRandomPick={() => setShowRandom(true)}
           selectedId={selectedId}
+          userLocation={userLocation}
+          sortByDistance={sortByDistance}
+          onToggleSortByDistance={() => setSortByDistance((v) => !v)}
         />
       </div>
 
@@ -188,7 +222,24 @@ export default function Home() {
           restaurants={filteredRestaurants}
           onMarkerClick={handleMarkerClick}
           selectedId={selectedId}
+          userLocation={userLocation}
         />
+
+        {/* Locate button */}
+        <button
+          onClick={handleLocate}
+          disabled={locating}
+          className="absolute top-4 right-4 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-60"
+          title="현재 위치 찾기"
+        >
+          {locating ? (
+            <span className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+          ) : (
+            <span className={`text-xl ${userLocation ? "text-primary" : "text-gray-700"}`}>
+              📍
+            </span>
+          )}
+        </button>
 
         {/* Detail Panel */}
         {selectedRestaurant && (
