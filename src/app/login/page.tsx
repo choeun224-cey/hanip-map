@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useDialog } from "@/lib/dialog";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const { user, loading, signIn } = useAuth();
@@ -37,7 +38,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-6">
       <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm">
         <div className="text-center mb-7">
-          <div className="text-5xl mb-3">📍</div>
+          <div className="flex justify-center mb-3">
+            <Logo size={64} />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">한입지도</h1>
           <p className="text-sm text-gray-500">
             둘이서 모은 맛집을 지도에 기록하고

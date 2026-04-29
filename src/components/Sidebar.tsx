@@ -5,6 +5,7 @@ import type { Restaurant, FilterState } from "@/types/restaurant";
 import { haversineDistance, formatDistance, type LatLng } from "@/lib/geo";
 import { useAuth, emailToUsername } from "@/lib/auth";
 import { useDialog } from "@/lib/dialog";
+import Logo from "./Logo";
 
 interface SidebarProps {
   restaurants: Restaurant[];
@@ -58,9 +59,10 @@ export default function Sidebar({
       {/* Header */}
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+            <Logo size={20} />
             한입지도
-            <span className="ml-2 text-sm font-normal text-gray-400">
+            <span className="text-sm font-normal text-gray-400">
               {restaurants.length}곳
             </span>
           </h1>
