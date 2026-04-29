@@ -13,7 +13,8 @@ import { supabase } from "./supabase";
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  signInWithKakao: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -44,12 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithKakao = async () => {
+  const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
+      provider: "google",
       options: {
-        scopes: "profile_nickname profile_image",
         redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const signInWithEmail = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
     if (error) throw error;
@@ -60,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithKakao, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signInWithGoogle, signInWithEmail, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
