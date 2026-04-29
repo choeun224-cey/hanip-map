@@ -44,9 +44,11 @@ export default function Sidebar({
   const nickname =
     (user?.user_metadata?.name as string | undefined) ||
     (user?.user_metadata?.full_name as string | undefined) ||
+    (user?.user_metadata?.preferred_username as string | undefined) ||
     user?.email?.split("@")[0] ||
     "사용자";
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const avatarUrl = (user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture) as string | undefined;
 
   const handleLogout = async () => {
     const ok = await confirm({
@@ -286,7 +288,9 @@ export default function Sidebar({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{nickname}</p>
-          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+          <p className="text-xs text-gray-400 truncate">
+            {user?.email || "카카오 로그인"}
+          </p>
         </div>
         <button
           onClick={handleLogout}
