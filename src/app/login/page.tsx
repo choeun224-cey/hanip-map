@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { user, loading, signIn } = useAuth();
   const { toast } = useDialog();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [signing, setSigning] = useState(false);
 
@@ -19,14 +19,14 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!username.trim() || !password) return;
     setSigning(true);
     try {
-      await signIn(email.trim(), password);
+      await signIn(username.trim(), password);
     } catch (err) {
       const raw = err instanceof Error ? err.message : "로그인 실패";
       const msg = /invalid login credentials/i.test(raw)
-        ? "이메일 또는 비밀번호가 올바르지 않아요"
+        ? "아이디 또는 비밀번호가 올바르지 않아요"
         : raw;
       toast(msg, "error");
       setSigning(false);
@@ -48,12 +48,12 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="아이디"
             required
-            autoComplete="email"
+            autoComplete="username"
             disabled={signing}
             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary disabled:opacity-60"
           />
@@ -69,7 +69,7 @@ export default function LoginPage() {
           />
           <button
             type="submit"
-            disabled={signing || !email.trim() || !password}
+            disabled={signing || !username.trim() || !password}
             className="w-full py-3 bg-primary text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors disabled:opacity-60"
           >
             {signing ? "로그인 중..." : "로그인"}

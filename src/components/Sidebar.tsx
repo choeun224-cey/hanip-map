@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Restaurant, FilterState } from "@/types/restaurant";
 import { haversineDistance, formatDistance, type LatLng } from "@/lib/geo";
-import { useAuth } from "@/lib/auth";
+import { useAuth, emailToUsername } from "@/lib/auth";
 import { useDialog } from "@/lib/dialog";
 
 interface SidebarProps {
@@ -41,12 +41,7 @@ export default function Sidebar({
   const { user, signOut } = useAuth();
   const { confirm } = useDialog();
 
-  const nickname =
-    (user?.user_metadata?.name as string | undefined) ||
-    (user?.user_metadata?.full_name as string | undefined) ||
-    (user?.user_metadata?.preferred_username as string | undefined) ||
-    user?.email?.split("@")[0] ||
-    "사용자";
+  const nickname = emailToUsername(user?.email);
   const avatarUrl = (user?.user_metadata?.avatar_url ||
     user?.user_metadata?.picture) as string | undefined;
 
@@ -288,9 +283,6 @@ export default function Sidebar({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{nickname}</p>
-          <p className="text-xs text-gray-400 truncate">
-            {user?.email || "카카오 로그인"}
-          </p>
         </div>
         <button
           onClick={handleLogout}
