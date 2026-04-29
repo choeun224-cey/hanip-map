@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { DialogProvider } from "@/lib/dialog";
@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "한입지도 | 우리만의 맛집 지도",
   description: "둘이서 모은 맛집을 지도에 기록하고, 다음 한 입을 찾아보세요.",
+  applicationName: "한입지도",
+  appleWebApp: {
+    capable: true,
+    title: "한입지도",
+    statusBarStyle: "default",
+  },
   openGraph: {
     type: "website",
     locale: "ko_KR",
@@ -28,6 +34,13 @@ export const metadata: Metadata = {
     title: "한입지도 | 우리만의 맛집 지도",
     description: "둘이서 모은 맛집을 지도에 기록하고, 다음 한 입을 찾아보세요.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ff6b35",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
