@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { DialogProvider } from "@/lib/dialog";
+import { AuthProvider } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,9 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${geistSans.variable} h-full`}>
       <body className="h-full font-sans">
-        <DialogProvider>{children}</DialogProvider>
+        <AuthProvider>
+          <DialogProvider>{children}</DialogProvider>
+        </AuthProvider>
       </body>
     </html>
   );

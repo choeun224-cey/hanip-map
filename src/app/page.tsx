@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import KakaoMap from "@/components/KakaoMap";
 import Sidebar from "@/components/Sidebar";
 import AddModal from "@/components/AddModal";
@@ -9,15 +10,22 @@ import RandomPicker from "@/components/RandomPicker";
 import { supabase } from "@/lib/supabase";
 import { getCurrentPosition, haversineDistance, type LatLng } from "@/lib/geo";
 import { useDialog } from "@/lib/dialog";
+import { useAuth } from "@/lib/auth";
 import type { Restaurant, FilterState, RestaurantFormData } from "@/types/restaurant";
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRandom, setShowRandom] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/login");
+  }, [user, authLoading, router]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -43,8 +51,9 @@ export default function Home() {
     }
   };
 
-  // Fetch restaurants
+  // Fetch restaurants once authenticated
   useEffect(() => {
+    if (!user) return;
     const fetchRestaurants = async () => {
       const { data } = await supabase
         .from("restaurants")
@@ -53,7 +62,7 @@ export default function Home() {
       if (data) setRestaurants(data);
     };
     fetchRestaurants();
-  }, []);
+  }, [user]);
 
   // Filter + optional distance sort
   const filteredRestaurants = useMemo(() => {
@@ -180,6 +189,14 @@ export default function Home() {
   const handleRandomSelect = useCallback((r: Restaurant) => {
     setSelectedId(r.id);
   }, []);
+
+  if (authLoading || !user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-gray-200 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col md:flex-row relative">

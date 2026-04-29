@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { Restaurant, FilterState } from "@/types/restaurant";
 import { haversineDistance, formatDistance, type LatLng } from "@/lib/geo";
+import { useAuth } from "@/lib/auth";
+import { useDialog } from "@/lib/dialog";
 
 interface SidebarProps {
   restaurants: Restaurant[];
@@ -36,6 +38,24 @@ export default function Sidebar({
   sortByDistance,
   onToggleSortByDistance,
 }: SidebarProps) {
+  const { user, signOut } = useAuth();
+  const { confirm } = useDialog();
+
+  const nickname =
+    (user?.user_metadata?.name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "사용자";
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+
+  const handleLogout = async () => {
+    const ok = await confirm({
+      message: "로그아웃 할까요?",
+      confirmText: "로그아웃",
+    });
+    if (ok) await signOut();
+  };
+
   return (
     <aside className="w-full md:w-[360px] h-full flex flex-col bg-white border-r border-gray-100">
       {/* Header */}
@@ -252,6 +272,28 @@ export default function Sidebar({
             })}
           </ul>
         )}
+      </div>
+
+      {/* User profile */}
+      <div className="p-3 border-t border-gray-100 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500 shrink-0">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            nickname.charAt(0)
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{nickname}</p>
+          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="px-3 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+        >
+          로그아웃
+        </button>
       </div>
     </aside>
   );
