@@ -9,7 +9,7 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://hanip-map-yk2r.vercel.app";
+const SITE_URL = "https://hanip-map.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
