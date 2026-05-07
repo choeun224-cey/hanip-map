@@ -61,11 +61,32 @@ declare global {
             status: string
           ) => void
         ): void;
+        coord2Address(
+          x: number,
+          y: number,
+          callback: (
+            result: {
+              road_address: { address_name: string } | null;
+              address: { address_name: string } | null;
+            }[],
+            status: string
+          ) => void
+        ): void;
       }
       class Places {
         keywordSearch(
           keyword: string,
-          callback: (result: PlaceResult[], status: string) => void
+          callback: (
+            result: PlaceResult[],
+            status: string,
+            pagination: Pagination
+          ) => void,
+          options?: {
+            location?: LatLng;
+            radius?: number;
+            size?: number;
+            page?: number;
+          }
         ): void;
       }
       interface PlaceResult {
@@ -77,10 +98,26 @@ declare global {
         category_name: string;
         phone: string;
       }
+      interface Pagination {
+        current: number;
+        totalCount: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+        nextPage(): void;
+        prevPage(): void;
+        gotoFirst(): void;
+        gotoLast(): void;
+        gotoPage(page: number): void;
+      }
       const Status: { OK: string; ZERO_RESULT: string; ERROR: string };
     }
 
     namespace event {
+      function addListener(
+        target: Map,
+        type: "click",
+        callback: (mouseEvent: { latLng: LatLng }) => void
+      ): void;
       function addListener(
         target: Map | Marker,
         type: string,

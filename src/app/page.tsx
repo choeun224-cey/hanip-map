@@ -19,6 +19,10 @@ export default function Home() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [showRandom, setShowRandom] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState("");
@@ -106,6 +110,11 @@ export default function Home() {
 
   const handleMarkerClick = useCallback((r: Restaurant) => {
     setSelectedId(r.id);
+  }, []);
+
+  const handleAddRequest = useCallback((lat: number, lng: number) => {
+    setPendingLocation({ lat, lng });
+    setShowAddModal(true);
   }, []);
 
   const handleAddRestaurant = async (
@@ -238,6 +247,7 @@ export default function Home() {
         <KakaoMap
           restaurants={filteredRestaurants}
           onMarkerClick={handleMarkerClick}
+          onAddRequest={handleAddRequest}
           selectedId={selectedId}
           userLocation={userLocation}
         />
@@ -274,7 +284,11 @@ export default function Home() {
       {/* Modals */}
       <AddModal
         open={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        initialLocation={pendingLocation}
+        onClose={() => {
+          setShowAddModal(false);
+          setPendingLocation(null);
+        }}
         onSubmit={handleAddRestaurant}
       />
       <RandomPicker

@@ -8,6 +8,7 @@ import type { LatLng } from "@/lib/geo";
 interface KakaoMapProps {
   restaurants: Restaurant[];
   onMarkerClick: (restaurant: Restaurant) => void;
+  onAddRequest?: (lat: number, lng: number) => void;
   selectedId?: string;
   userLocation?: LatLng | null;
 }
@@ -15,6 +16,7 @@ interface KakaoMapProps {
 export default function KakaoMap({
   restaurants,
   onMarkerClick,
+  onAddRequest,
   selectedId,
   userLocation,
 }: KakaoMapProps) {
@@ -22,7 +24,13 @@ export default function KakaoMap({
   const markersRef = useRef<kakao.maps.Marker[]>([]);
   const overlaysRef = useRef<kakao.maps.CustomOverlay[]>([]);
   const userOverlayRef = useRef<kakao.maps.CustomOverlay | null>(null);
+  const tempOverlayRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onAddRequestRef = useRef(onAddRequest);
+
+  useEffect(() => {
+    onAddRequestRef.current = onAddRequest;
+  }, [onAddRequest]);
 
   useEffect(() => {
     loadKakaoMap().then(() => {
@@ -33,6 +41,57 @@ export default function KakaoMap({
         level: 8,
       });
       mapRef.current = map;
+
+      kakao.maps.event.addListener(map, "click", (mouseEvent) => {
+        const latlng = mouseEvent.latLng;
+        const lat = latlng.getLat();
+        const lng = latlng.getLng();
+
+        if (tempOverlayRef.current) tempOverlayRef.current.setMap(null);
+
+        const container = document.createElement("div");
+        const btn = document.createElement("button");
+        btn.textContent = "＋ 여기에 맛집 추가";
+        btn.style.cssText =
+          "background:#ff6b35;color:white;padding:10px 16px;border:none;" +
+          "border-radius:24px;font-size:13px;font-weight:600;" +
+          "box-shadow:0 4px 12px rgba(0,0,0,0.18);cursor:pointer;" +
+          "white-space:nowrap;font-family:inherit;touch-action:manipulation;";
+
+        // Block ALL pointer/touch events from bubbling to the kakao map,
+        // otherwise the map's click handler fires and replaces this overlay.
+        const swallow = (e: Event) => e.stopPropagation();
+        [
+          "mousedown",
+          "mouseup",
+          "click",
+          "touchstart",
+          "touchend",
+          "pointerdown",
+          "pointerup",
+        ].forEach((name) => {
+          container.addEventListener(name, swallow);
+        });
+
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (tempOverlayRef.current) {
+            tempOverlayRef.current.setMap(null);
+            tempOverlayRef.current = null;
+          }
+          onAddRequestRef.current?.(lat, lng);
+        });
+        container.appendChild(btn);
+
+        const overlay = new kakao.maps.CustomOverlay({
+          position: latlng,
+          content: container,
+          yAnchor: 1.6,
+          xAnchor: 0.5,
+        });
+        overlay.setMap(map);
+        tempOverlayRef.current = overlay;
+      });
     });
   }, []);
 
@@ -119,10 +178,14 @@ export default function KakaoMap({
       const markerImage = new kakao.maps.MarkerImage(
         markerSvg,
         new kakao.maps.Size(28, 40),
-        { offset: new kakao.maps.Point(14, 40) }
+        { offset: new kakao.maps.Point(14, 40) },
       );
 
-      const marker = new kakao.maps.Marker({ position, map, image: markerImage });
+      const marker = new kakao.maps.Marker({
+        position,
+        map,
+        image: markerImage,
+      });
 
       const isSelected = r.id === selectedId;
       const overlayContent = `

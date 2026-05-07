@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RestaurantFormData } from "@/types/restaurant";
 
 interface AddModalProps {
   open: boolean;
+  initialLocation?: { lat: number; lng: number } | null;
   onClose: () => void;
   onSubmit: (data: RestaurantFormData & { lat: number; lng: number }) => void;
 }
@@ -22,7 +23,12 @@ const TAG_SUGGESTIONS = [
   "야외석",
 ];
 
-export default function AddModal({ open, onClose, onSubmit }: AddModalProps) {
+export default function AddModal({
+  open,
+  initialLocation,
+  onClose,
+  onSubmit,
+}: AddModalProps) {
   const [form, setForm] = useState<RestaurantFormData>({
     name: "",
     address: "",
@@ -43,33 +49,69 @@ export default function AddModal({ open, onClose, onSubmit }: AddModalProps) {
   } | null>(null);
   const [searching, setSearching] = useState(false);
 
+  // Reset when the modal closes
+  useEffect(() => {
+    if (open) return;
+    setSelectedPlace(null);
+    setSearchKeyword("");
+    setSearchResults([]);
+  }, [open]);
+
+  // When opened with a location from the main map, auto-fill it
+  useEffect(() => {
+    if (!open || !initialLocation) return;
+    if (typeof kakao === "undefined" || !kakao.maps) return;
+
+    const { lat, lng } = initialLocation;
+    setSelectedPlace({ lat, lng });
+
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.coord2Address(lng, lat, (result, status) => {
+      const addr =
+        status === kakao.maps.services.Status.OK
+          ? result[0]?.road_address?.address_name ||
+            result[0]?.address?.address_name ||
+            ""
+          : "";
+      setForm((f) => ({ ...f, address: addr }));
+    });
+  }, [open, initialLocation]);
+
   if (!open) return null;
 
   const handleSearch = () => {
     if (!searchKeyword.trim()) return;
     setSearching(true);
+    setSearchResults([]);
 
     const ps = new kakao.maps.services.Places();
-    ps.keywordSearch(searchKeyword, (results, status) => {
-      setSearching(false);
-      if (status === kakao.maps.services.Status.OK) {
-        setSearchResults(results.slice(0, 5));
-      } else {
+    const accumulated: kakao.maps.services.PlaceResult[] = [];
+
+    ps.keywordSearch(searchKeyword, (results, status, pagination) => {
+      if (status !== kakao.maps.services.Status.OK) {
         setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+      accumulated.push(...results);
+      if (pagination.hasNextPage) {
+        pagination.nextPage();
+      } else {
+        setSearchResults(accumulated);
+        setSearching(false);
       }
     });
   };
 
   const handleSelectPlace = (place: kakao.maps.services.PlaceResult) => {
+    const lat = parseFloat(place.y);
+    const lng = parseFloat(place.x);
     setForm({
       ...form,
       name: place.place_name,
       address: place.road_address_name || place.address_name,
     });
-    setSelectedPlace({
-      lat: parseFloat(place.y),
-      lng: parseFloat(place.x),
-    });
+    setSelectedPlace({ lat, lng });
     setSearchResults([]);
     setSearchKeyword(place.place_name);
   };
@@ -115,44 +157,72 @@ export default function AddModal({ open, onClose, onSubmit }: AddModalProps) {
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Place Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              장소 검색
-            </label>
-            <div className="flex gap-2">
-              <input
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="식당 이름이나 주소를 검색하세요"
-                className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
-              />
-              <button
-                onClick={handleSearch}
-                disabled={searching}
-                className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-              >
-                검색
-              </button>
+          {/* Selected location (from map click or search) */}
+          {selectedPlace && (
+            <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-100 rounded-xl">
+              <span className="text-base leading-5">📍</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 break-words">
+                  {form.address || "주소 변환 중..."}
+                </p>
+                <button
+                  onClick={onClose}
+                  className="mt-1 text-xs text-orange-600 hover:underline"
+                >
+                  지도에서 다시 선택
+                </button>
+              </div>
             </div>
-            {searchResults.length > 0 && (
-              <ul className="mt-2 border border-gray-200 rounded-xl overflow-hidden">
-                {searchResults.map((place, i) => (
-                  <li
-                    key={`${place.place_name}-${i}`}
-                    onClick={() => handleSelectPlace(place)}
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
-                  >
-                    <p className="text-sm font-medium">{place.place_name}</p>
-                    <p className="text-xs text-gray-500">
-                      {place.road_address_name || place.address_name}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
+
+          {/* Search (alternative to map click) */}
+          {!selectedPlace && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                가게 이름으로 검색
+              </label>
+              <p className="text-xs text-gray-400 mb-2">
+                또는 모달을 닫고 지도에서 직접 위치를 클릭하세요
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="가게 이름"
+                  className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={searching}
+                  className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+                >
+                  검색
+                </button>
+              </div>
+              {searchResults.length > 0 && (
+                <>
+                  <p className="mt-2 text-xs text-gray-400">
+                    검색 결과 {searchResults.length}개
+                  </p>
+                  <ul className="mt-1 border border-gray-200 rounded-xl overflow-y-auto max-h-72">
+                    {searchResults.map((place, i) => (
+                      <li
+                        key={`${place.place_name}-${i}`}
+                        onClick={() => handleSelectPlace(place)}
+                        className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                      >
+                        <p className="text-sm font-medium">{place.place_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {place.road_address_name || place.address_name}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
 
           {selectedPlace && (
             <>
